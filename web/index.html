@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b0d12" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>MouseKeyboard WiFi</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header class="bar">
+    <span id="status-dot" class="dot"></span>
+    <span id="status-text">Conectando…</span>
+  </header>
+
+  <main>
+    <div id="touchpad" class="touchpad">
+      <div class="hint">
+        <strong>Touchpad</strong> · arraste move · toque clica · 2 dedos rolam<br />
+        segure um botão e mova aqui = arrastar / selecionar
+      </div>
+    </div>
+
+    <div class="buttons">
+      <button id="btn-left" class="btn">Clique Esquerdo</button>
+      <button id="btn-right" class="btn">Clique Direito</button>
+    </div>
+
+    <!-- Keyboard is always visible, alongside the touchpad -->
+    <div id="kb-keys" class="kb-keys"></div>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>

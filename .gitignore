@@ -1,0 +1,8 @@
+venv
+.venv
+__pycache__
+.pytest_cache
+tests/frontend/node_modules
+tests/frontend/test-results
+tests/frontend/playwright-report
+.mypy_cache

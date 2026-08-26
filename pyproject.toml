@@ -1,0 +1,25 @@
+[project]
+name = "mousekeyboardwifi"
+version = "0.1.0"
+requires-python = "==3.12.*"
+dependencies = [
+    "fastapi==0.115.6",
+    "uvicorn[standard]==0.34.0",
+    "evdev==1.7.1",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest==8.3.4",
+    "pytest-cov==6.0.0",
+    "httpx==0.28.1",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["server"]
+testpaths = ["tests"]
+
+[tool.uv]
+# Never re-resolve implicitly; bump deps explicitly with:
+#   uv lock --upgrade-package <pkg>==<new-ver>
+upgrade = false
