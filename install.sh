@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 # Installs MouseKeyboard WiFi: system deps, /dev/uinput permissions, a Python
-# venv, and a systemd *user* service that autostarts with your desktop session.
+# venv and a systemd *user* service. The service is only enabled at login with
+# --autostart (default: installed but off; start it by hand or from the tray launcher).
 set -euo pipefail
+
+AUTOSTART=0
+[ "${1:-}" = "--autostart" ] && AUTOSTART=1
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PORT="${MKW_PORT:-8765}"
@@ -52,7 +56,7 @@ fi
 # ---------------------------------------------------------------------------
 # 4. systemd user service (autostart)
 # ---------------------------------------------------------------------------
-bold "4/5  Serviço systemd (autostart)"
+bold "4/5  Serviço systemd"
 UNIT_DIR="$HOME/.config/systemd/user"
 mkdir -p "$UNIT_DIR"
 cat > "$UNIT_DIR/$SERVICE_NAME.service" <<EOF
@@ -73,7 +77,12 @@ WantedBy=graphical-session.target
 EOF
 
 systemctl --user daemon-reload
-systemctl --user enable "$SERVICE_NAME.service" >/dev/null
+if [ "$AUTOSTART" -eq 1 ]; then
+  systemctl --user enable "$SERVICE_NAME.service" >/dev/null
+  info "Autostart ligado (sobe junto com a sessão)."
+else
+  info "Autostart desligado (padrão). Ligar no login: ./install.sh --autostart"
+fi
 
 # ---------------------------------------------------------------------------
 # 5. Start
@@ -83,9 +92,11 @@ IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
 if [ "$NEED_RELOGIN" -eq 1 ]; then
   info "Faça LOGOUT/LOGIN (ou reinicie) para o grupo 'input' valer, depois rode:"
   info "    systemctl --user start $SERVICE_NAME"
-else
+elif [ "$AUTOSTART" -eq 1 ]; then
   systemctl --user restart "$SERVICE_NAME.service"
   info "Serviço iniciado."
+else
+  info "Para usar agora:  systemctl --user start $SERVICE_NAME   (ou ./run.sh)"
 fi
 echo
 bold "No celular (mesma rede Wi-Fi) abra:  http://${IP:-SEU_IP}:$PORT"
