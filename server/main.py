@@ -103,7 +103,7 @@ def main():
 
     url = f"http://{lan_ip}:{port}"
     log.info("Servidor ativo em %s  (abra esse endereço no celular)", url)
-    traymod.notify("MouseKeyboard WiFi ativo", f"Abra {url} no celular")
+    # sem notificação de "ativo": só erro aparece (e o ícone/QR já mostram o endereço)
 
     try:
         tray.run()  # blocks until quit

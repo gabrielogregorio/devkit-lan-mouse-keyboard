@@ -3,6 +3,7 @@ notifications. Degrades gracefully to a headless blocking loop if the GTK /
 AppIndicator stack is not available."""
 
 import logging
+import os
 import subprocess
 import threading
 
@@ -37,6 +38,11 @@ class Tray:
         self._setup()
 
     def _setup(self):
+        # outro lançador já mostra o ícone deste app
+        if os.environ.get("MKW_SEM_BANDEJA") == "1":
+            log.info("MKW_SEM_BANDEJA=1: sem ícone próprio, só o loop headless")
+            self._available = False
+            return
         try:
             import gi
 
