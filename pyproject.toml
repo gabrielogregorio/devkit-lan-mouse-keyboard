@@ -1,6 +1,7 @@
 [project]
-name = "mousekeyboardwifi"
-version = "0.1.0"
+name = "devkit-lan-mouse-keyboard"
+version = "1.0.0"
+description = "The phone becomes the PC's mouse and keyboard over the local network (Ubuntu): FastAPI/WebSocket server that injects input through /dev/uinput"
 requires-python = "==3.12.*"
 dependencies = [
     "fastapi==0.115.6",
@@ -8,18 +9,32 @@ dependencies = [
     "evdev==1.7.1",
 ]
 
-[project.optional-dependencies]
-test = [
+[dependency-groups]
+dev = [
     "pytest==8.3.4",
     "pytest-cov==6.0.0",
     "httpx==0.28.1",
+    "ruff==0.16.4",
 ]
 
 [tool.pytest.ini_options]
 pythonpath = ["server"]
 testpaths = ["tests"]
 
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+extend-exclude = ["tests/frontend"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "B", "I", "UP"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["i18n", "input_device", "main", "tray", "web", "conftest"]
+
 [tool.uv]
-# Never re-resolve implicitly; bump deps explicitly with:
+# "Virtual" project: not an installable package, only scripts (server/main.py, run.sh).
+# uv manages the dependencies only. Never re-resolve implicitly; bump deps explicitly with:
 #   uv lock --upgrade-package <pkg>==<new-ver>
+package = false
 upgrade = false
