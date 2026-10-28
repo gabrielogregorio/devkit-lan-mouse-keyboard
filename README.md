@@ -75,8 +75,11 @@ Built and tested on Ubuntu 24.04.
 
    The menu follows the system language (the screenshot is in Brazilian Portuguese: Ligado = On,
    Mostrar QR code = Show QR code). The address is the PC's local IP, so the QR code only works on
-   the same network. The QR code needs `sudo apt install python3-segno`; without it the window
-   shows only the address. `./tray_icon.py --remove` takes the icon out of the login.
+   the same network. Without `python3-segno` the QR window shows only the address.
+   `./tray_icon.py --remove` takes the icon out of the login.
+   The icon runs on the system python3 and needs `sudo apt install python3-gi gir1.2-gtk-3.0
+   gir1.2-ayatanaappindicator3-0.1` (already on a standard Ubuntu desktop) plus `python3-segno` for
+   the QR code.
 
    Menu: the status line ("LAN Mouse & Keyboard (phone as mouse and keyboard): on air (port
    8765)"), **On** (starts or stops the server), the address for the device, **Show QR code**,
@@ -90,6 +93,9 @@ Built and tested on Ubuntu 24.04.
 | `~/.config/systemd/user/lan-mouse-keyboard.service` | systemd user service (stores the folder path) |
 | `/etc/udev/rules.d/99-lan-mouse-keyboard.rules` | `/dev/uinput` owned by the `input` group, mode 0660 |
 | `/etc/modules-load.d/uinput.conf` | loads `uinput` at boot |
+| `~/.config/autostart/devkit-lan-mouse-keyboard-tray.desktop` | starts the top bar icon at login, off (`./tray_icon.py --install`; `--remove` takes it out) |
+| `~/.local/share/applications/devkit-lan-mouse-keyboard-tray.desktop` | app menu shortcut for the icon (same command) |
+| `~/.cache/devkit-lan-mouse-keyboard/` | the icon's `server.log` ("View log"), on/off SVGs, the QR code PNG and its lock |
 
 Moved the folder? Run `./install.sh` again (the service and the venv store the path; move `venv/`
 to `trash/` first so it is recreated).
