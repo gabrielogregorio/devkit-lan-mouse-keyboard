@@ -18,7 +18,7 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-pythonpath = ["server"]
+pythonpath = ["server", "."]
 testpaths = ["tests"]
 
 [tool.ruff]
@@ -30,7 +30,7 @@ extend-exclude = ["tests/frontend"]
 select = ["E", "F", "W", "B", "I", "UP"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["i18n", "input_device", "main", "tray", "web", "conftest"]
+known-first-party = ["i18n", "input_device", "main", "tray", "tray_icon", "web", "conftest"]
 
 [tool.uv]
 # "Virtual" project: not an installable package, only scripts (server/main.py, run.sh).

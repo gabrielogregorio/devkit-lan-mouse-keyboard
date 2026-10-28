@@ -18,6 +18,9 @@ one address in the phone's browser: **no app, no password, no login**.
 - **Tray icon** showing whether someone is connected (optional, `LMK_NO_TRAY=1` hides it).
 - On the phone: **touchpad** (drag moves, tap clicks, 2 fingers scroll) and **keyboard**.
 - **systemd user service**, off at login by default (`./install.sh --autostart` turns it on).
+- **Top bar launcher** `tray_icon.py` (`--install`): always on the bar, off at login, turns the
+  server on and off and shows the QR code. It runs the server with `LMK_NO_TRAY=1`, so use it or
+  the service's own icon, not both.
 - **Receive only**: nothing is ever sent back (no screen capture, files, clipboard).
 - No password: type the IP and use it.
 
@@ -76,6 +79,8 @@ devkit-lan-mouse-keyboard/
 ├── install.sh           # deps + uinput permission + systemd user service
 ├── uninstall.sh         # removes the service and the udev rule
 ├── run.sh               # runs in the foreground
+├── tray_icon.py         # top bar launcher: starts/stops ./run.sh with LMK_NO_TRAY=1, QR code;
+│                        #   --install puts it in the login autostart, off (pick it or the service)
 ├── run-tests.sh         # lint + pytest + node i18n (+ Playwright with RUN_E2E=1)
 ├── docs/                # README screenshots (metadata stripped)
 ├── server/
