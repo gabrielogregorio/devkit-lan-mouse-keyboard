@@ -78,6 +78,10 @@ Built and tested on Ubuntu 24.04.
    the same network. The QR code needs `sudo apt install python3-segno`; without it the window
    shows only the address. `./tray_icon.py --remove` takes the icon out of the login.
 
+   Menu: the status line ("LAN Mouse & Keyboard (phone as mouse and keyboard): on air (port
+   8765)"), **On** (starts or stops the server), the address for the device, **Show QR code**,
+   **View log** (the server output). A middle click on the icon toggles it.
+
 **Outside the repository:**
 
 | Path | What |
