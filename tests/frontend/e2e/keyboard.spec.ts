@@ -16,11 +16,17 @@ async function tapKey(page: any, label: string) {
   await el.dispatchEvent("pointerup",   { bubbles: true, cancelable: true });
 }
 
-// helper: tap a key by its data-char attribute (for character keys)
+// helper: tap a character key by its base (lowercase) character, whatever Shift shows on it
 async function tapChar(page: any, char: string) {
-  const el = page.locator(`[data-char="${char}"]`).first();
+  const el = page.locator(`#kb-keys [data-base="${char}"]`).first();
   await el.dispatchEvent("pointerdown", { bubbles: true, cancelable: true });
   await el.dispatchEvent("pointerup",   { bubbles: true, cancelable: true });
+}
+
+// helper: press a key that re-renders the keyboard (layer switch, Shift). The app acts on
+// pointerdown and rebuilds the keys, so a pointerup would wait for an element that is gone.
+async function pressToken(page: any, token: string) {
+  await page.locator(`#kb-keys [data-token="${token}"]`).dispatchEvent("pointerdown", { bubbles: true, cancelable: true });
 }
 
 function escapeRe(s: string) {
@@ -38,7 +44,7 @@ test("tap 'a' sends k message with text a", async ({ page }) => {
 // ── 5.4.2  Shift one-shot ─────────────────────────────────────────────────────
 test("shift one-shot: next letter is uppercase, then resets", async ({ page }) => {
   await clearSent(page);
-  await tapKey(page, "⇧");        // shift armed
+  await pressToken(page, "{shift}");        // shift armed
   await tapChar(page, "a");       // should send "A"
   await tapChar(page, "b");       // should send "b" (shift consumed)
 
@@ -53,11 +59,8 @@ test("shift one-shot: next letter is uppercase, then resets", async ({ page }) =
 test("double-tap shift enables caps lock, stays uppercase", async ({ page }) => {
   await clearSent(page);
   // Double tap within 350ms
-  const shiftEl = page.locator(`#kb-keys .key`).filter({ hasText: /^⇧$/ }).first();
-  await shiftEl.dispatchEvent("pointerdown", { bubbles: true, cancelable: true });
-  await shiftEl.dispatchEvent("pointerup",   { bubbles: true, cancelable: true });
-  await shiftEl.dispatchEvent("pointerdown", { bubbles: true, cancelable: true });
-  await shiftEl.dispatchEvent("pointerup",   { bubbles: true, cancelable: true });
+  await pressToken(page, "{shift}");
+  await pressToken(page, "{shift}");
 
   await tapChar(page, "a");
   await tapChar(page, "b");
@@ -72,7 +75,7 @@ test("double-tap shift enables caps lock, stays uppercase", async ({ page }) => 
 test("tap ?123 switches to sym layer, ABC switches back", async ({ page }) => {
   await clearSent(page);
   // Switch to sym layer
-  await tapKey(page, "?123");
+  await pressToken(page, "{sym}");
 
   // "@" is on sym layer
   const atEl = page.locator(`[data-char="@"]`).first();
@@ -80,7 +83,7 @@ test("tap ?123 switches to sym layer, ABC switches back", async ({ page }) => {
   await atEl.dispatchEvent("pointerup",   { bubbles: true, cancelable: true });
 
   // Switch back to abc layer
-  await tapKey(page, "ABC");
+  await pressToken(page, "{abc}");
   // "a" should now be visible
   const aEl = page.locator(`[data-char="a"]`).first();
   await aEl.dispatchEvent("pointerdown", { bubbles: true, cancelable: true });
@@ -141,7 +144,7 @@ test("Ctrl+Alt+Del sends combo with both mods", async ({ page }) => {
 test("Ctrl+Shift+T includes shift in mods", async ({ page }) => {
   await clearSent(page);
   await tapKey(page, "Ctrl");
-  await tapKey(page, "⇧");
+  await pressToken(page, "{shift}");
   await tapChar(page, "t");
 
   const msgs = await getSent(page);

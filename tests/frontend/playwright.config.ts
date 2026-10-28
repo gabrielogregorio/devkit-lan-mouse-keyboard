@@ -6,13 +6,14 @@ export default defineConfig({
   retries: 0,
   workers: 1,
   use: {
-    baseURL: "http://localhost:4321",
+    baseURL: "http://127.0.0.1:4321",
     hasTouch: true,
+    locale: "en-US",
     viewport: { width: 390, height: 844 },
   },
   webServer: {
-    command: "python3 -m http.server 4321 --directory ../../web",
-    url: "http://localhost:4321",
+    command: "python3 -m http.server 4321 --bind 127.0.0.1 --directory ../../web",
+    url: "http://127.0.0.1:4321",
     reuseExistingServer: !process.env.CI,
     timeout: 10_000,
   },
@@ -22,6 +23,7 @@ export default defineConfig({
       use: {
         ...devices["Pixel 5"],
         hasTouch: true,
+        locale: "en-US",
       },
     },
   ],

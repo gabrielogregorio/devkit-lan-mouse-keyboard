@@ -16,6 +16,7 @@ const WS_STUB = `
       this.url = url;
       this.readyState = 0; // CONNECTING
       window.__wsInstances++;
+      window.__ws = this; // the latest socket, so a test can close it
       // Simulate async open so the page's onopen handler fires after connect()
       setTimeout(() => {
         this.readyState = 1; // OPEN
@@ -58,7 +59,7 @@ export async function clearSent(page: Page): Promise<void> {
   await page.evaluate(() => { (window as any).__sent = []; });
 }
 
-/** Wait for the fake WS to fire onopen (status = "Conectado"). */
+/** Wait for the fake WS to fire onopen (status = "Connected"). */
 export async function waitConnected(page: Page): Promise<void> {
   await page.waitForSelector("#status-dot.ok", { timeout: 2000 });
 }

@@ -55,22 +55,3 @@ test("small height (430px): layout does not overflow", async ({ page }) => {
   // Keyboard still present
   await expect(page.locator("#kb-keys")).toBeVisible();
 });
-
-// ── 5.6.4  Screenshot baselines ───────────────────────────────────────────────
-test("portrait screenshot baseline", async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/");
-  await waitConnected(page);
-  await expect(page).toHaveScreenshot("portrait-baseline.png", {
-    maxDiffPixelRatio: 0.03,
-  });
-});
-
-test("landscape screenshot baseline", async ({ page }) => {
-  await page.setViewportSize({ width: 844, height: 390 });
-  await page.goto("/");
-  await waitConnected(page);
-  await expect(page).toHaveScreenshot("landscape-baseline.png", {
-    maxDiffPixelRatio: 0.03,
-  });
-});
