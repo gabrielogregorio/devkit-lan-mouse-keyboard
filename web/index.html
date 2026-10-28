@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport"
@@ -7,32 +7,29 @@
   <meta name="theme-color" content="#0b0d12" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <title>MouseKeyboard WiFi</title>
+  <title data-i18n>LAN Mouse &amp; Keyboard</title>
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
   <header class="bar">
     <span id="status-dot" class="dot"></span>
-    <span id="status-text">Conectando…</span>
+    <span id="status-text" data-i18n>Connecting…</span>
   </header>
 
   <main>
     <div id="touchpad" class="touchpad">
-      <div class="hint">
-        <strong>Touchpad</strong> · arraste move · toque clica · 2 dedos rolam<br />
-        segure um botão e mova aqui = arrastar / selecionar
-      </div>
+      <div class="hint" data-i18n-html><strong>Touchpad</strong> · drag to move · tap to click · 2 fingers scroll<br>hold a button and move here = drag / select</div>
     </div>
 
     <div class="buttons">
-      <button id="btn-left" class="btn">Clique Esquerdo</button>
-      <button id="btn-right" class="btn">Clique Direito</button>
+      <button id="btn-left" class="btn" data-i18n>Left click</button>
+      <button id="btn-right" class="btn" data-i18n>Right click</button>
     </div>
 
     <!-- Keyboard is always visible, alongside the touchpad -->
     <div id="kb-keys" class="kb-keys"></div>
   </main>
 
-  <script src="/app.js"></script>
+  <script type="module" src="/app.js"></script>
 </body>
 </html>

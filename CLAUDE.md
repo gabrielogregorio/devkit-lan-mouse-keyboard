@@ -1,365 +1,325 @@
-# CLAUDE.md — MouseKeyboard WiFi
+# CLAUDE.md - LAN Mouse & Keyboard
 
-Guia para o Claude (e humanos) trabalharem neste repositório. Descreve o que o
-projeto é, como está montado, o protocolo, as decisões de design e os comandos
-de operação/teste.
-
----
-
-## 1. Visão geral
-
-App que permite **controlar o mouse e o teclado de um PC Ubuntu pelo celular**,
-na rede local, abrindo apenas um endereço no navegador do celular — **sem app,
-sem senha, sem login**.
-
-Requisitos originais (todos atendidos):
-
-- Controla **mouse e teclado** do PC via Wi-Fi.
-- **Só funciona na rede local** (aceita apenas IPs privados/loopback/link-local).
-- **Notificação do Ubuntu** a cada novo dispositivo conectado.
-- Ícone **persistente na bandeja** indicando se há alguém conectado.
-- No celular: **touchpad** (deslizar move, tocar clica, scroll) e **teclado**.
-- Tudo replicado fielmente no Ubuntu.
-- **Serviço com autostart** (systemd user), iniciável pelo terminal.
-- UI **moderna e simples**.
-- **Só recebe comandos** — nunca envia dados de volta (sem captura de tela,
-  arquivos, etc.).
-- Conexão **sem senha**: digita o IP e usa.
-
-Funcionalidades adicionais pedidas depois:
-
-- Teclado **HTML próprio** (não o do celular), com QWERTY + camada de símbolos +
-  setas, responsivo em **retrato e paisagem**.
-- Teclas estilo PC: **Ctrl, Alt, Super, Esc, Tab, Del** + **combinações reais**
-  (Ctrl+C, Ctrl+Alt+T, Alt+Tab…).
-- Teclado e touchpad **sempre visíveis juntos** (sem precisar abrir nada).
-- **Multitouch**: segurar um botão de clique com um dedo e mover outro dedo no
-  touchpad ao mesmo tempo (arrastar/selecionar).
-
-> Nota: houve uma versão com gesto de "toque-e-meio" (tap-and-drag estilo
-> libinput) que **foi revertida** a pedido do usuário, em favor do multitouch
-> "segura o botão + move". Não reintroduzir sem pedido explícito.
+Rules and context for any agent (or person) that touches this project. Read all of it before
+editing. Code, comments, logs and docs are in English; the page is English or Brazilian
+Portuguese by the browser language (`web/i18n.js`), and the tray menu and notifications follow
+the system language (`server/i18n.py`).
 
 ---
 
-## 2. Arquitetura
+## 1. What it is
+
+Control the **mouse and keyboard of an Ubuntu PC from a phone** on the local network, by opening
+one address in the phone's browser: **no app, no password, no login**.
+
+- Controls **mouse and keyboard** over the LAN (Wi-Fi or cable, same network).
+- **Local network only** (accepts private, loopback and link-local IPs).
+- **Ubuntu notification** for every new connected device.
+- **Tray icon** showing whether someone is connected (optional, `LMK_NO_TRAY=1` hides it).
+- On the phone: **touchpad** (drag moves, tap clicks, 2 fingers scroll) and **keyboard**.
+- **systemd user service**, off at login by default (`./install.sh --autostart` turns it on).
+- **Receive only**: nothing is ever sent back (no screen capture, files, clipboard).
+- No password: type the IP and use it.
+
+Later additions:
+
+- Own **HTML keyboard** (not the phone's), QWERTY + symbol layer + arrows, responsive in
+  **portrait and landscape**.
+- PC-style keys: **Ctrl, Alt, Super, Esc, Tab, Del** + **real shortcuts** (Ctrl+C, Ctrl+Alt+T,
+  Alt+Tab...).
+- Keyboard and touchpad **always visible together**.
+- **Multitouch**: hold a click button with one finger and move another finger on the touchpad
+  (drag/select).
+
+> A "tap-and-drag" gesture (libinput style) existed once and **was reverted** in favor of the
+> multitouch "hold the button + move". Do not bring it back without an explicit request.
+
+---
+
+## 2. Architecture
 
 ```
 ┌─────────────┐   HTTP (UI)      ┌──────────────────────────────────────┐
-│  Navegador  │ ───────────────▶ │  FastAPI (web.py)                    │
-│  do celular │   WebSocket /ws  │   - serve web/ (UI estática)         │
-│  (web/)     │ ◀──────────────▶ │   - recebe comandos JSON             │
-└─────────────┘   comandos JSON  │   - trava: só IP da rede local       │
+│  Phone      │ ───────────────▶ │  FastAPI (web.py)                    │
+│  browser    │   WebSocket /ws  │   - serves web/ (static UI)          │
+│  (web/)     │ ◀──────────────▶ │   - receives JSON commands           │
+└─────────────┘   JSON commands  │   - guard: local network IPs only    │
                                  └───────────────┬──────────────────────┘
-                                                 │ chama
+                                                 │ calls
                                                  ▼
                                  ┌──────────────────────────────────────┐
                                  │ InputController (input_device.py)    │
                                  │   evdev UInput → /dev/uinput         │
-                                 │   (injeção a nível de kernel)        │
+                                 │   (kernel-level injection)           │
                                  └──────────────────────────────────────┘
-            main.py orquestra: servidor (thread) + Tray/notificações (GTK main)
+            main.py wires it: server (thread) + Tray/notifications (GTK main)
 ```
 
-- **Injeção de entrada** é feita via `/dev/uinput` (evdev `UInput`), a nível de
-  kernel — por isso funciona **igual em X11 e Wayland**. Não depende de
-  `pynput`/`xdotool`/`ydotool`.
-- A **UI mobile é uma página web** servida pelo próprio PC; o celular só precisa
-  de um navegador. Os comandos trafegam por **WebSocket** (baixa latência).
-- O fluxo é **unidirecional em dados de usuário**: o servidor só *recebe*
-  comandos e os injeta. Nada é lido nem devolvido ao celular.
+- **Input injection** goes through `/dev/uinput` (evdev `UInput`), at kernel level, so it works
+  **the same on X11 and Wayland**. No `pynput`/`xdotool`/`ydotool`.
+- The **mobile UI is a web page** served by the PC; the phone only needs a browser. Commands
+  travel over a **WebSocket** (low latency).
+- **One-way for user data**: the server only *receives* commands and injects them.
 
 ---
 
-## 3. Estrutura de arquivos
+## 3. Files
 
 ```
-mousekeyboardwifi/
-├── CLAUDE.md            # este arquivo
-├── README.md           # instruções de uso para o usuário final (PT-BR)
-├── requirements.txt    # fastapi, uvicorn[standard], evdev
-├── install.sh          # deps + permissão uinput + serviço systemd (autostart)
-├── uninstall.sh        # remove serviço e regras
-├── run.sh              # roda em primeiro plano (teste)
-├── .gitignore          # venv, __pycache__
+devkit-lan-mouse-keyboard/
+├── CLAUDE.md            # this file
+├── README.md            # user docs (new PC setup, scripts, CI/CD)
+├── VERSION              # release version (bump in the PR)
+├── pyproject.toml       # deps + ruff + pytest; uv.lock is the source of truth
+├── requirements.txt     # runtime, exported from uv.lock (install.sh uses it)
+├── requirements-dev.txt # runtime + tests + ruff, exported from uv.lock (CI uses it)
+├── install.sh           # deps + uinput permission + systemd user service
+├── uninstall.sh         # removes the service and the udev rule
+├── run.sh               # runs in the foreground
+├── run-tests.sh         # lint + pytest + node i18n (+ Playwright with RUN_E2E=1)
+├── docs/                # README screenshots (metadata stripped)
 ├── server/
-│   ├── main.py         # entry point: monta tudo, watchdog de bind, callbacks
-│   ├── input_device.py # mouse+teclado virtual via uinput; mapas de teclas
-│   ├── web.py          # FastAPI: estáticos + /ws + trava de rede local
-│   └── tray.py         # ícone de bandeja (AppIndicator) + notify-send
-└── web/                # UI mobile (servida estaticamente)
-    ├── index.html
-    ├── style.css
-    └── app.js          # WebSocket, gestos do touchpad, teclado on-screen
+│   ├── main.py          # entry point: wires everything, bind watchdog, callbacks
+│   ├── input_device.py  # virtual mouse+keyboard over uinput; key maps
+│   ├── web.py           # FastAPI: static files + /ws + local network guard
+│   ├── tray.py          # tray icon (AppIndicator) + notify-send
+│   └── i18n.py          # tray/notification strings: tr(), PT_BR
+├── web/                 # mobile UI (served as static files)
+│   ├── index.html
+│   ├── style.css
+│   ├── i18n.js          # page strings: PT_BR, detectLanguage, translator
+│   └── app.js           # ES module: WebSocket, touchpad gestures, on-screen keyboard
+└── tests/
+    ├── test_*.py        # pytest with a fake UInput and fake controller
+    └── frontend/        # i18n.test.mjs (node:test) + Playwright e2e/ with a fake WebSocket
 ```
 
 ---
 
 ## 4. Backend (Python)
 
-### `server/input_device.py` — `InputController`
-- Cria um dispositivo virtual `UInput` chamado `mousekeyboardwifi` com
-  capacidades: `EV_REL` (REL_X, REL_Y, REL_WHEEL, REL_HWHEEL) e `EV_KEY` (todas
-  as teclas usadas + botões do mouse + modificadores).
-- Métodos:
-  - `move(dx, dy)` — movimento relativo do cursor.
-  - `scroll(dx, dy)` — roda vertical/horizontal.
-  - `button(name, pressed)` / `click(name)` — `left|right|middle`.
-  - `type_text(text)` — digita uma string char-a-char (layout **US**).
-  - `key(name)` — tecla especial nomeada.
-  - `combo(mods, key)` — segura modificadores, bate a tecla, solta (atalhos).
-  - `close()`.
-- Um `threading.Lock` serializa as escritas no uinput (o dispatch roda em
-  thread via `asyncio.to_thread`).
-- **Mapa de caracteres** (`CHAR_MAP`): construído para layout **US QWERTY**,
-  inclui letras (com shift p/ maiúsculas), dígitos, símbolos do shift+número e
-  pontuação com pares shiftados. ~97 entradas.
+### `server/input_device.py` - `InputController`
+- Creates a `UInput` virtual device named `lan-mouse-keyboard` with `EV_REL` (REL_X, REL_Y,
+  REL_WHEEL, REL_HWHEEL) and `EV_KEY` (every key used + mouse buttons + modifiers).
+- Methods: `move(dx, dy)`, `scroll(dx, dy)`, `button(name, pressed)` / `click(name)`
+  (`left|right|middle`), `type_text(text)` (char by char, **US** layout), `key(name)`,
+  `combo(mods, key)` (hold modifiers, tap, release), `close()`.
+- A `threading.Lock` serializes uinput writes (dispatch runs in a thread via
+  `asyncio.to_thread`).
+- `CHAR_MAP`: **US QWERTY** layout, letters (shift for upper case), digits, shift+digit symbols
+  and punctuation with shifted pairs. ~97 entries.
 
-### `server/web.py` — FastAPI
-- `create_app(controller, on_connect, on_disconnect)` monta o app.
-- `is_local(host)`: aceita apenas `ip.is_private | is_loopback | is_link_local`
-  (trata IPv4-mapped IPv6). **Toda** requisição HTTP passa por um middleware que
-  retorna **403** se não for local; o handler do WebSocket fecha com código
-  **1008** se não for local.
-- Endpoints:
-  - `GET /` e estáticos → servidos de `web/` via `StaticFiles(html=True)`.
-  - `WS /ws` → loop de recepção; cada mensagem JSON é despachada em
-    `asyncio.to_thread(_dispatch, ...)` (uinput é bloqueante).
-- `_dispatch` traduz a mensagem JSON em chamadas do `InputController`.
+### `server/web.py` - FastAPI
+- `create_app(controller, on_connect, on_disconnect)`.
+- `is_local(host)`: only `ip.is_private | is_loopback | is_link_local` (handles IPv4-mapped
+  IPv6). **Every** HTTP request goes through a middleware that returns **403** when not local;
+  the WebSocket handler closes with **1008** when not local.
+- `GET /` and static files from `web/` (`StaticFiles(html=True)`); `WS /ws` receive loop, each
+  JSON message dispatched in `asyncio.to_thread(_dispatch, ...)`.
 
 ### `server/tray.py`
-- `Tray(ip, port)`: ícone de bandeja via `gi` + `AyatanaAppIndicator3` (GTK3).
-  Menu mostra status (nº de conectados), endereço e "Sair".
-- `set_connected(n)` atualiza o rótulo (via `GLib.idle_add`, thread-safe).
-- **Degradação graciosa**: se o stack GTK/AppIndicator não existir, roda
-  *headless* (sem ícone) bloqueando num `Event`.
-- `notify(title, body)`: dispara `notify-send` (best-effort).
+- `Tray(ip, port)`: tray icon via `gi` + `AyatanaAppIndicator3` (GTK3). Menu shows the status
+  (connected count) and the address. **No Quit item**: the icon stays while the service runs;
+  stop the service to turn it off.
+- `set_connected(n)` updates the label (via `GLib.idle_add`, thread-safe).
+- **Graceful degradation**: without GTK/AppIndicator (or with `LMK_NO_TRAY=1`, used when another
+  launcher already shows an icon) it runs *headless*, blocking on an `Event`.
+- `notify(title, body)`: `notify-send` (best effort).
 
-### `server/main.py` — orquestração
-- Lê `MKW_HOST` (default `0.0.0.0`) e `MKW_PORT` (default **8765**).
-- Cria `InputController` (sai com erro claro se faltar permissão no uinput).
-- Sobe o uvicorn numa **thread** e aguarda `server.started` por ~5s — se não
-  subir (ex.: porta ocupada), **encerra com exit(1)** para o systemd reportar
-  falha (em vez de ficar "active" mas morto).
-- Callbacks `on_connect`/`on_disconnect` mantêm um contador (com lock),
-  disparam notificação e atualizam a bandeja.
-- `tray.run()` bloqueia a thread principal (loop do GTK ou espera headless).
+### `server/main.py`
+- Reads `LMK_HOST` (default `0.0.0.0`) and `LMK_PORT` (default **8765**).
+- Creates the `InputController` (clear error and exit 1 without uinput permission).
+- Starts uvicorn in a **thread** and waits ~5 s for `server.started`; if it does not bind (port
+  in use) it **exits 1** so systemd reports the failure instead of "active" but dead.
+- `on_connect`/`on_disconnect` keep a counter (with a lock), notify and update the tray.
+- No "server up" notification: only errors show (the icon already shows the address).
 
 ---
 
-## 5. Protocolo WebSocket
+## 5. WebSocket protocol
 
-Cliente → servidor, mensagens **JSON**, campo `t` = tipo. Nunca há resposta de
-dados (o servidor não envia comandos de volta).
+Client → server, **JSON**, field `t` = type. Nothing is ever sent back.
 
-| `t`     | Campos                       | Ação                                   |
-|---------|------------------------------|----------------------------------------|
-| `m`     | `dx`, `dy`                   | Move o cursor (relativo)               |
-| `s`     | `dx`, `dy`                   | Scroll (wheel / hwheel)                |
-| `c`     | `b` (`left`/`right`/`middle`)| Clique (down+up)                       |
-| `d`     | `b`                          | Botão **pressiona** (segura)           |
-| `u`     | `b`                          | Botão **solta**                        |
-| `k`     | `text`                       | Digita o texto (char-a-char, US)       |
-| `key`   | `code`                       | Tecla especial nomeada                 |
-| `combo` | `mods` (lista), `key`        | Atalho: segura `mods`, bate `key`, solta |
+| `t`     | Fields                        | Action                                  |
+|---------|-------------------------------|-----------------------------------------|
+| `m`     | `dx`, `dy`                    | Move the cursor (relative)              |
+| `s`     | `dx`, `dy`                    | Scroll (wheel / hwheel)                 |
+| `c`     | `b` (`left`/`right`/`middle`) | Click (down+up)                         |
+| `d`     | `b`                           | Button **press** (hold)                 |
+| `u`     | `b`                           | Button **release**                      |
+| `k`     | `text`                        | Type the text (char by char, US)        |
+| `key`   | `code`                        | Named special key                       |
+| `combo` | `mods` (list), `key`          | Shortcut: hold `mods`, tap `key`, release |
 
-**Botões**: `left`, `right`, `middle`.
+**Special keys (`key.code`)**: `backspace`, `enter`, `tab`, `space`, `esc`/`escape`, `up`,
+`down`, `left`, `right`, `home`, `end`, `pageup`, `pagedown`, `delete`/`del`.
 
-**Teclas especiais (`key.code`)**: `backspace`, `enter`, `tab`, `space`,
-`esc`/`escape`, `up`, `down`, `left`, `right`, `home`, `end`, `pageup`,
-`pagedown`, `delete`/`del`.
-
-**Modificadores (`combo.mods`)**: `ctrl`/`control`, `alt`, `altgr`, `shift`,
-`super`/`meta`/`win`. Em `combo`, `key` pode ser um caractere (`"c"`) ou uma
-tecla especial (`"tab"`). Se o caractere exigir shift no layout, o shift é
-adicionado automaticamente.
+**Modifiers (`combo.mods`)**: `ctrl`/`control`, `alt`, `altgr`, `shift`, `super`/`meta`/`win`.
+In `combo`, `key` is a character (`"c"`) or a special key (`"tab"`). If the character needs shift
+in the layout, shift is added on its own.
 
 ---
 
 ## 6. Frontend (`web/`)
 
-UI dark, moderna, sem dependências externas. Tudo em `app.js` (vanilla JS).
+Dark UI, no external dependencies. `app.js` is an ES module (vanilla JS) that imports `i18n.js`.
 
-### Layout (sempre visível, sem abrir nada)
-`header` (status da conexão) → **touchpad** (flex) → **2 botões de clique** →
-**teclado on-screen**. Responsivo: em paisagem e telas baixas as teclas encolhem
-(media queries por `orientation` e `max-height`).
+### Language
+- `detectLanguage(location.search, navigator.languages)`: `?lang=en|pt-BR` wins, else the first
+  browser language; `pt*` = pt-BR, anything else English.
+- Static text uses `data-i18n` (text) or `data-i18n-html` (markup) with the **English content as
+  the key**; dynamic text goes through `t("...")`. Keep the hint markup on one line with `<br>`
+  (the browser serializes `<br />` as `<br>` and the key would not match).
 
-### Touchpad (gestos)
-- **Arrastar 1 dedo** → move o cursor (`m`), com sensibilidade `SENS=1.6` e
-  acumulação de deltas por `requestAnimationFrame` (suaviza e reduz mensagens).
-- **Toque rápido** (curto, sem mover) → clique esquerdo (`c`).
-- **2 dedos** → scroll (`s`); **2 dedos toque** → clique direito.
-- Usa **`e.targetTouches`** (não `e.touches`): conta só os dedos que tocam no
-  *próprio* touchpad — essencial para o multitouch (ver abaixo).
+### Layout (always visible)
+`header` (connection status) → **touchpad** (flex) → **2 click buttons** → **on-screen keyboard**.
+Landscape and short screens shrink the keys (media queries on `orientation` and `max-height`).
 
-### Botões de clique (multitouch — pressionar e segurar)
-- `bindHold(id, b)`: usa **pointer events**. `pointerdown` → `{t:'d'}` (segura),
-  `pointerup`/`pointerleave`/`pointercancel` → `{t:'u'}` (solta).
-- **Toque rápido** = down+up = clique normal.
-- **Segurar o botão com um dedo + mover outro dedo no touchpad** = arrastar /
-  selecionar (os dois toques coexistem porque o pad só conta `targetTouches`).
+### Touchpad
+- **1 finger drag** → move (`m`), sensitivity `SENS=1.6`, deltas accumulated per
+  `requestAnimationFrame`.
+- **Quick tap** → left click; **2 fingers** → scroll; **2 finger tap** → right click.
+- Uses **`e.targetTouches`** (not `e.touches`): only fingers on the pad itself count, which is
+  what makes button+pad multitouch work.
 
-### Teclado on-screen
-- Duas camadas: `abc` (QWERTY) e `sym` (símbolos), alternadas por `?123`/`ABC`.
-- **Fileira de função** (em ambas): `Esc Tab Ctrl Alt ⊞(Super) ◀ ▲ ▼ ▶ Del`.
-- **Shift** one-shot; **Caps Lock** com duplo-toque no Shift.
-- **Modificadores** `Ctrl/Alt/Super` ficam **armados** (destacados) até a próxima
-  tecla; aí enviam um `combo` e limpam. Suporta múltiplos juntos (Ctrl+Alt+Del).
-  Shift entra no combo se estiver armado (Ctrl+Shift+T).
-- **Repetição ao segurar** (`repeat: true`) em Backspace e setas.
-- Render via `render()` a partir de `LAYERS`/`SPECIAL`; cada tecla tem
-  `pointerdown` para resposta imediata.
+### Click buttons (press and hold)
+- `bindHold(id, b)` with **pointer events**: `pointerdown` → `{t:'d'}`,
+  `pointerup`/`pointerleave`/`pointercancel` → `{t:'u'}`. Quick tap = normal click.
 
-### Conexão
-- `ws://<host>/ws` (ou `wss` se https), com **reconexão automática** (1s) e
-  indicador de status (bolinha verde/vermelha).
+### On-screen keyboard
+- Layers `abc` (QWERTY) and `sym`, switched by `?123`/`ABC`. Function row on both:
+  `Esc Tab Ctrl Alt ⊞(Super) ◀ ▲ ▼ ▶ Del`.
+- **Shift** one-shot; **Caps Lock** with a double tap on Shift.
+- `Ctrl/Alt/Super` stay **armed** until the next key, which sends a `combo`. Several at once work
+  (Ctrl+Alt+Del); an armed Shift joins the combo (Ctrl+Shift+T).
+- **Repeat on hold** on Backspace and arrows.
+
+### Connection
+- `ws://<host>/ws` (or `wss` under https), **auto-reconnect** after 1 s, status dot.
 
 ---
 
-## 7. Segurança e modelo de confiança
+## 7. Security and trust model
 
-- **Sem senha por design** — o usuário quis "digita o IP e usa".
-- Defesa = **rede local apenas**: HTTP não-local → 403; WS não-local → close
-  1008. `is_local` cobre privado/loopback/link-local.
-- Dispositivo virtual **só escreve** eventos. Não há leitura de tela, arquivos,
-  clipboard nem qualquer canal de volta ao celular.
-- Recomendação: usar apenas em **Wi-Fi confiável** (qualquer um na mesma rede
-  que souber o IP:porta pode controlar). Documentado no README.
+- **No password by design**: "type the IP and use it".
+- Defense = **local network only**: non-local HTTP → 403, non-local WS → close 1008.
+- The virtual device only **writes** events; nothing is read or sent back.
+- Use it only on a **trusted network**: anyone on it who knows IP:port can control the PC.
 
 ---
 
-## 8. Serviço, autostart e permissões
+## 8. Service, autostart and permissions
 
-### systemd **user** service
-- Unit: `~/.config/systemd/user/mousekeyboardwifi.service`.
-- `WantedBy=graphical-session.target` (precisa da sessão gráfica para bandeja e
-  notificações). `Restart=on-failure`. `Environment=MKW_PORT=8765`.
-- É **user service** (não system) porque depende do DBus/sessão do usuário para
-  bandeja + notificações; sobe no login.
-
-### Permissão do `/dev/uinput`
-- `install.sh` cria udev rule `99-mousekeyboardwifi.rules`
-  (`KERNEL=="uinput", GROUP="input", MODE="0660"`), garante o módulo `uinput`
-  carregado, e adiciona o usuário ao grupo `input` (exige relogin **uma vez**).
-- **Importante (uaccess)**: numa sessão local ativa o `systemd-logind` já dá uma
-  **ACL** `user:<você>:rw-` em `/dev/uinput`, então funciona na sessão atual
-  mesmo antes do relogin. O grupo `input` é a garantia que **persiste após
-  reboot**. Conferir com `getfacl /dev/uinput`.
-
-### venv
-- Criado com **`--system-site-packages`** para o `PyGObject` (gi/AppIndicator)
-  do sistema ficar acessível dentro do venv. O tray **não** funciona sem o
-  pacote apt `gir1.2-ayatanaappindicator3-0.1`.
+- systemd **user** unit `~/.config/systemd/user/lan-mouse-keyboard.service`,
+  `WantedBy=graphical-session.target` (needs the session D-Bus for tray and notifications),
+  `Restart=on-failure`, `Environment=LMK_PORT=8765`. Enabled only with `--autostart`.
+- `install.sh` writes the udev rule `99-lan-mouse-keyboard.rules`
+  (`KERNEL=="uinput", GROUP="input", MODE="0660"`), loads `uinput` at boot and adds the user to
+  the `input` group (**one** relogin).
+- **uaccess**: in an active local session `systemd-logind` already grants an ACL
+  `user:<you>:rw-` on `/dev/uinput`, so it works before the relogin. The `input` group is what
+  survives a reboot. Check with `getfacl /dev/uinput`.
+- The venv uses **`--system-site-packages`** so the system `PyGObject` (gi/AppIndicator) is
+  visible. The tray needs the apt package `gir1.2-ayatanaappindicator3-0.1`.
 
 ---
 
-## 9. Configuração
+## 9. Settings
 
-| Variável   | Default     | Descrição                          |
-|------------|-------------|------------------------------------|
-| `MKW_HOST` | `0.0.0.0`   | Interface de bind                  |
-| `MKW_PORT` | `8765`      | Porta HTTP/WebSocket               |
+| Variable      | Default   | Description                                   |
+|---------------|-----------|-----------------------------------------------|
+| `LMK_HOST`    | `0.0.0.0` | Bind interface                                |
+| `LMK_PORT`    | `8765`    | HTTP/WebSocket port                           |
+| `LMK_NO_TRAY` | unset     | `1` = no own tray icon (headless loop)        |
+| `LMK_LANG`    | unset     | `en` or `pt-BR` for tray and notifications    |
 
-> Se mudar a porta, atualize a unit (`Environment=`), o `install.sh` e o README.
+> Changing the port? Sync `main.py`, `install.sh` (unit `Environment=`) and the README.
 
 ---
 
-## 10. Operação (comandos)
+## 10. Operation
 
 ```bash
-# Instalar tudo (deps + permissões + serviço + autostart). Precisa de sudo.
-./install.sh
-
-# Operar o serviço (user scope)
-systemctl --user status  mousekeyboardwifi
-systemctl --user restart mousekeyboardwifi
-systemctl --user stop    mousekeyboardwifi
-journalctl  --user -u    mousekeyboardwifi -f
-
-# Rodar em primeiro plano (debug)
-./run.sh        # = venv/bin/python server/main.py
-
-# Remover
+./install.sh                 # deps + permissions + service (off at login). Needs sudo.
+./install.sh --autostart     # same, and starts with the session
+systemctl --user start|stop|restart|status lan-mouse-keyboard
+journalctl --user -u lan-mouse-keyboard -f
+./run.sh                     # foreground
 ./uninstall.sh
 ```
 
-Acesso no celular: `http://<IP-do-PC>:8765` (mesma Wi-Fi).
+Phone: `http://<PC-IP>:8765` (same network).
 
-> Em ambientes shell sem sessão de usuário exportada, prefixe os `systemctl
-> --user` com `XDG_RUNTIME_DIR=/run/user/$(id -u)`.
+> In a shell without the user session exported, prefix `systemctl --user` with
+> `XDG_RUNTIME_DIR=/run/user/$(id -u)`.
 
 ---
 
-## 11. Desenvolvimento e testes
+## 11. Development and tests
 
-- **Web** (`web/`) é servida estática: editar e **dar refresh no celular** —
-  **não precisa reiniciar** o serviço. Backend (`server/`) sim precisa restart.
-- Checagens rápidas:
-  ```bash
-  node --check web/app.js          # sintaxe JS
-  python3 -m py_compile server/*.py # sintaxe Python
-  ```
-- Smoke test (sem precisar de celular) — exercita uinput de verdade (a sessão do
-  Ubuntu tem acesso ao /dev/uinput via ACL):
+- `web/` is static: edit and **refresh the phone**, no restart. `server/` needs a restart.
+- `./run-tests.sh` = ruff + shellcheck (if installed) + pytest + node i18n; `RUN_E2E=1` adds
+  Playwright (after `cd tests/frontend && npm ci`). It must end with `ALL GREEN`.
+- Tests **never open `/dev/uinput`** (`FakeUInput` in `conftest.py`) and never start the real
+  server: nothing may move the mouse of the PC running them.
+- Playwright is **pinned** (`tests/frontend/package-lock.json`, 1.62.0) and runs with
+  `locale: en-US`; `?lang=pt-BR` covers the Portuguese page.
+- Manual smoke test that does move the real cursor (only when you mean it):
   ```bash
   ./venv/bin/python - <<'PY'
-  import sys; sys.path.insert(0,"server")
+  import sys; sys.path.insert(0, "server")
   from input_device import InputController
   c = InputController()
-  c.move(7,0); c.move(-7,0); c.scroll(0,1); c.key("left")
-  c.type_text("hi"); c.combo(["ctrl"],"c"); c.close()
+  c.move(7, 0); c.move(-7, 0); c.scroll(0, 1); c.key("left")
+  c.type_text("hi"); c.combo(["ctrl"], "c"); c.close()
   print("ok")
   PY
   ```
-- Teste do servidor + trava de rede via `fastapi.testclient.TestClient`
-  (passar um controller fake e checar `GET /` = 200, IP público = 403).
+
+## 12. CI/CD and releases
+
+- `.github/workflows/`: `tests.yml` (unit, then e2e with the Playwright report on failure),
+  `check-quality.yml` (ruff, shellcheck, `node --check`, exec bit, pinned actions, YAML),
+  `codeql-analysis.yml`, `auto-complete-fields.yml` (PR assign/labels/changelog/title, fails if
+  `VERSION` is already tagged), `create-tag-and-release.yml` (merged PR → tag `v$VERSION` +
+  release with tarball and SHA256SUMS). Shared setup in `.github/actions/setup-environment`.
+- Release = bump `VERSION` in the PR and merge. No manual tags.
+- **Actions pinned by commit hash** (`uses: owner/repo@<40 hex> # vX.Y.Z`); the lint job fails on
+  a tag ref. Runners stay on `ubuntu-24.04`, ruff stays `==` pinned.
+- PR text reaches the release through `env:` and a file, never `${{ }}` inside `run:`.
+- Deps: edit `pyproject.toml`, `uv lock`, then
+  `uv export --frozen --no-dev --no-emit-project --no-hashes -o requirements.txt` and
+  `uv export --frozen --all-groups --no-emit-project --no-hashes -o requirements-dev.txt`.
 
 ---
 
-## 12. Decisões de design e armadilhas (gotchas)
+## 13. Design decisions and gotchas
 
-- **uinput em vez de pynput/xdotool**: única abordagem que funciona em X11 **e**
-  Wayland de forma idêntica. Custo: precisa de permissão no `/dev/uinput`.
-- **`is_private` no Python 3.12**: ranges de documentação (ex.: `203.0.113.0/24`)
-  são classificados como privados. Inofensivo aqui; só atrapalha testes — use
-  `8.8.8.8`/`1.1.1.1` como exemplos de "público".
-- **`self.ui.device` pode ser `None`** (evdev não reabre o nó). Não acessar
-  `.device.path` sem `getattr` — já tratado no log.
-- **Watchdog de bind**: sem ele, falha de porta deixava o processo "active" mas
-  sem servidor. `main.py` agora sai com 1 se não subir.
-- **`targetTouches` vs `touches`**: `touches` é global (tela toda) — um dedo no
-  botão seria contado como "2º dedo" no pad e viraria scroll. `targetTouches`
-  resolve e habilita o multitouch botão+pad.
-- **Pointer events nos botões**: dão captura implícita no touch, então segurar é
-  estável e `pointerleave` não dispara no meio do hold.
-- **Layout de teclado é US**: `type_text` assume US QWERTY. Caracteres fora do
-  mapa são ignorados. Para outros layouts seria preciso um mapa configurável ou
-  o protocolo de teclado virtual do Wayland (complexo) — não implementado.
+- **uinput instead of pynput/xdotool**: the only approach that behaves the same on X11 and
+  Wayland. Cost: permission on `/dev/uinput`.
+- **`is_private` on Python 3.12**: documentation ranges (`203.0.113.0/24`) count as private.
+  Harmless here; in tests use `8.8.8.8`/`1.1.1.1` as "public".
+- **`self.ui.device` can be `None`** (evdev does not reopen the node). Use `getattr`.
+- **Bind watchdog**: without it a port failure left the process "active" with no server.
+- **`targetTouches` vs `touches`**: `touches` is global; a finger on a button would count as a
+  2nd finger on the pad and turn into scroll.
+- **Pointer events on buttons** give implicit capture on touch, so holding is stable.
+- **US layout**: `type_text` assumes US QWERTY; unmapped characters are skipped.
 
----
+## 14. Known limits / ideas
 
-## 13. Limitações conhecidas / ideias futuras
+- The keyboard is the **on-screen HTML** one; the phone's native keyboard/IME is not captured.
+- `type_text` is US-only (no accents/IME).
+- No authentication (on purpose). An optional PIN could come later without breaking the default.
+- Possible: adjustable sensitivity, middle click, media keys, F1-F12, drag lock, 3-finger gestures.
 
-- Teclado físico/IME: o teclado é o **on-screen HTML** (decisão do usuário); não
-  capturamos o teclado nativo do celular.
-- `type_text` limitado ao layout US (acentos/IME não suportados).
-- Sem autenticação (intencional). Se um dia quiser, dá para adicionar um PIN
-  opcional sem quebrar o "sem senha" como default.
-- Possíveis extensões: sensibilidade ajustável na UI, clique do meio na UI,
-  teclas de mídia, F1–F12, modo "drag lock", gestos de 3 dedos.
+## 15. Conventions
 
----
-
-## 14. Convenções para o Claude neste repo
-
-- **Idioma**: UI, README e mensagens ao usuário em **PT-BR**. Código/comentários
-  podem ficar em inglês (como já estão).
-- **Não reintroduzir** o gesto tap-and-drag revertido sem pedido explícito.
-- Ao mudar o **protocolo**, atualizar os três pontos: `_dispatch` (web.py),
-  o método em `input_device.py` e o emissor em `app.js` — e a tabela na seção 5.
-- Ao mudar a **porta** ou **env**, sincronizar `main.py`, `install.sh`, a unit e
-  o README.
-- Mudou só `web/`? Basta refresh no celular. Mudou `server/`? `systemctl --user
-  restart mousekeyboardwifi`.
-- Validar com `node --check` e `py_compile` antes de concluir.
+- Every new page string is English, through `data-i18n` or `t("...")`, with its line in
+  `web/i18n.js` `PT_BR`; every tray/notification string is English inside `tr()` with its line in
+  `server/i18n.py`. The i18n tests fail on a missing line, different `{placeholders}` or an unused
+  line.
+- Do **not** bring back the reverted tap-and-drag gesture.
+- Changing the **protocol** touches three places: `_dispatch` (web.py), the method in
+  `input_device.py` and the sender in `app.js`, plus the table in section 5.
+- Commits: one line, English.

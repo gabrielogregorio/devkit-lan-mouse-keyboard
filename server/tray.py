@@ -7,9 +7,11 @@ import os
 import subprocess
 import threading
 
+from i18n import tr
+
 log = logging.getLogger(__name__)
 
-_APP_NAME = "MouseKeyboard WiFi"
+_APP_NAME = tr("LAN Mouse & Keyboard")
 
 
 def notify(title: str, body: str = ""):
@@ -38,9 +40,9 @@ class Tray:
         self._setup()
 
     def _setup(self):
-        # outro lançador já mostra o ícone deste app
-        if os.environ.get("MKW_SEM_BANDEJA") == "1":
-            log.info("MKW_SEM_BANDEJA=1: sem ícone próprio, só o loop headless")
+        # another launcher already shows this app's icon
+        if os.environ.get("LMK_NO_TRAY") == "1":
+            log.info("LMK_NO_TRAY=1: no own icon, headless loop only")
             self._available = False
             return
         try:
@@ -48,10 +50,12 @@ class Tray:
 
             gi.require_version("Gtk", "3.0")
             gi.require_version("AyatanaAppIndicator3", "0.1")
-            from gi.repository import (  # noqa: E402
-                Gtk,
+            from gi.repository import (
                 AyatanaAppIndicator3 as AppIndicator3,
+            )
+            from gi.repository import (  # noqa: E402
                 GLib,
+                Gtk,
             )
 
             self._gtk = Gtk
@@ -59,7 +63,7 @@ class Tray:
 
             menu = Gtk.Menu()
 
-            self._status_item = Gtk.MenuItem(label="Aguardando conexão")
+            self._status_item = Gtk.MenuItem(label=tr("Waiting for a connection"))
             self._status_item.set_sensitive(False)
             menu.append(self._status_item)
 
@@ -67,16 +71,11 @@ class Tray:
             addr_item.set_sensitive(False)
             menu.append(addr_item)
 
-            menu.append(Gtk.SeparatorMenuItem())
-
-            quit_item = Gtk.MenuItem(label="Sair")
-            quit_item.connect("activate", self._on_quit)
-            menu.append(quit_item)
-
+            # no Quit item: the icon always stays; stop the service to turn it off
             menu.show_all()
 
             self._indicator = AppIndicator3.Indicator.new(
-                "mousekeyboardwifi",
+                "lan-mouse-keyboard",
                 "input-mouse",
                 AppIndicator3.IndicatorCategory.APPLICATION_STATUS,
             )
@@ -89,27 +88,20 @@ class Tray:
             log.warning("Tray unavailable (%s); running headless", ex)
             self._available = False
 
-    def _on_quit(self, *_):
-        self.stop()
-
     def set_connected(self, count: int):
         self.count = count
         if not self._available:
             return
 
         def _update():
-            if count > 0:
-                label = (
-                    f"{count} dispositivo(s) conectado(s)"
-                    if count != 1
-                    else "1 dispositivo conectado"
-                )
-                icon = "input-mouse"
+            if count == 1:
+                label = tr("1 device connected")
+            elif count > 1:
+                label = tr("{count} devices connected", count=count)
             else:
-                label = "Aguardando conexão"
-                icon = "input-mouse"
+                label = tr("Waiting for a connection")
             self._status_item.set_label(label)
-            self._indicator.set_icon_full(icon, label)
+            self._indicator.set_icon_full("input-mouse", label)
             return False
 
         self._glib.idle_add(_update)

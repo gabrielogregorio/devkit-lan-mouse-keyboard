@@ -8,7 +8,8 @@ udev rule + membership of the `input` group).
 import logging
 import threading
 
-from evdev import UInput, ecodes as e
+from evdev import UInput
+from evdev import ecodes as e
 
 log = logging.getLogger(__name__)
 
@@ -107,7 +108,7 @@ class InputController:
             e.EV_KEY: sorted(keys),
             e.EV_REL: [e.REL_X, e.REL_Y, e.REL_WHEEL, e.REL_HWHEEL],
         }
-        self.ui = ui_factory(capabilities, name="mousekeyboardwifi")
+        self.ui = ui_factory(capabilities, name="lan-mouse-keyboard")
         # Serialize access: uinput writes from the asyncio worker must not interleave.
         self._lock = threading.Lock()
         dev = getattr(self.ui, "device", None)

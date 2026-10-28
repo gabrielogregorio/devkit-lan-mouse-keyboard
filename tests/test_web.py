@@ -1,12 +1,10 @@
 """Tests for web.py: is_local, _dispatch, HTTP middleware, WebSocket."""
-import json
 import time
 
 import pytest
 from fastapi.testclient import TestClient
 
-from web import create_app, is_local, _dispatch
-
+from web import _dispatch, create_app, is_local
 
 # ── 3.1  is_local ─────────────────────────────────────────────────────────────
 

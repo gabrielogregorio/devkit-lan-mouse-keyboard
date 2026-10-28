@@ -1,4 +1,13 @@
-"use strict";
+import { detectLanguage, translator } from "./i18n.js";
+
+// ===========================================================================
+// Language: ?lang= or the browser's first language (pt* = pt-BR)
+// ===========================================================================
+const language = detectLanguage(location.search, navigator.languages || [navigator.language]);
+const t = translator(language);
+document.documentElement.lang = language === "pt-BR" ? "pt-BR" : "en";
+for (const el of document.querySelectorAll("[data-i18n]")) el.textContent = t(el.textContent.trim());
+for (const el of document.querySelectorAll("[data-i18n-html]")) el.innerHTML = t(el.innerHTML.trim());
 
 // ===========================================================================
 // WebSocket with auto-reconnect
@@ -19,11 +28,11 @@ function connect() {
   ws = new WebSocket(`${proto}://${location.host}/ws`);
   ws.onopen = () => {
     connected = true;
-    setStatus("ok", "Conectado");
+    setStatus("ok", t("Connected"));
   };
   ws.onclose = () => {
     connected = false;
-    setStatus("bad", "Reconectando…");
+    setStatus("bad", t("Reconnecting…"));
     setTimeout(connect, 1000);
   };
   ws.onerror = () => ws.close();

@@ -3,13 +3,11 @@ import pytest
 from evdev import ecodes as e
 
 from input_device import (
-    InputController,
     CHAR_MAP,
-    SPECIAL_KEYS,
     MODIFIERS,
-    BUTTONS,
+    SPECIAL_KEYS,
+    InputController,
 )
-
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 

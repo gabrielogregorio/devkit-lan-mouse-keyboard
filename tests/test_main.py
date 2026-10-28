@@ -1,13 +1,11 @@
 """Tests for main.py: get_lan_ip, wait_until_started, make_callbacks, PermissionError."""
-import socket
-import sys
 import threading
-from unittest.mock import MagicMock, patch
+import time
+from unittest.mock import MagicMock
 
 import pytest
 
 import main as main_mod
-
 
 # ── 4.4a  get_lan_ip ─────────────────────────────────────────────────────────
 
@@ -40,7 +38,7 @@ class TestWaitUntilStarted:
         thread.is_alive.return_value = True
 
         def flip():
-            import time; time.sleep(0.05)
+            time.sleep(0.05)
             server.started = True
 
         threading.Thread(target=flip, daemon=True).start()

@@ -5,14 +5,14 @@ test.beforeEach(async ({ page }) => {
 });
 
 // ── 5.5.1  Connected status ───────────────────────────────────────────────────
-test("page shows Conectado after WS opens", async ({ page }) => {
+test("page shows Connected after WS opens", async ({ page }) => {
   await waitConnected(page);
-  await expect(page.locator("#status-text")).toContainText("Conectado");
+  await expect(page.locator("#status-text")).toContainText("Connected");
   await expect(page.locator("#status-dot")).toHaveClass(/ok/);
 });
 
 // ── 5.5.2  Reconnect on close ─────────────────────────────────────────────────
-test("status changes to Reconectando after WS closes, then reconnects", async ({ page }) => {
+test("status changes to Reconnecting after WS closes, then reconnects", async ({ page }) => {
   await waitConnected(page);
 
   // Track how many WS instances are created (reconnect = new instance)
@@ -25,7 +25,7 @@ test("status changes to Reconectando after WS closes, then reconnects", async ({
   });
 
   // Status should immediately change to reconnecting
-  await expect(page.locator("#status-text")).toContainText("Reconectando", { timeout: 2000 });
+  await expect(page.locator("#status-text")).toContainText("Reconnecting", { timeout: 2000 });
   await expect(page.locator("#status-dot")).toHaveClass(/bad/);
 
   // After ~1s a new WS should be created (reconnect)
@@ -55,4 +55,16 @@ test("send while readyState != OPEN does not throw or send", async ({ page }) =>
   const sent = await getSent(page);
   // All sends while closed should have been dropped
   expect(sent.filter((m: any) => m !== null)).toEqual(sent); // just verify no crash
+});
+
+// ── 5.5.4  Language ───────────────────────────────────────────────────────────
+test("page is English by default and pt-BR with ?lang=pt-BR", async ({ page }) => {
+  await waitConnected(page);
+  await expect(page.locator("#btn-left")).toHaveText("Left click");
+  await page.goto("/?lang=pt-BR");
+  await waitConnected(page);
+  await expect(page.locator("#status-text")).toHaveText("Conectado");
+  await expect(page.locator("#btn-left")).toHaveText("Clique Esquerdo");
+  await expect(page.locator(".hint")).toContainText("arraste move");
+  await expect(page.locator("html")).toHaveAttribute("lang", "pt-BR");
 });
