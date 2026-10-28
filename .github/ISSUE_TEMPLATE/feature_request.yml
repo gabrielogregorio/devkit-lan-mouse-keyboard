@@ -1,0 +1,22 @@
+name: Feature request
+description: A new key, gesture or setting on the page, or a change in how the PC receives input
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What you are trying to do and what gets in the way today
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: The solution you would like
+      description: e.g. "F1-F12 row", "adjustable pointer speed", "media keys"
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered

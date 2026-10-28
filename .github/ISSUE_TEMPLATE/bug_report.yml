@@ -1,0 +1,61 @@
+name: Bug report
+description: The page does not open, the phone does not connect or the mouse/keyboard does not act on the PC
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: Include the status shown on the page and any error in the service log.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. `./run.sh` on the PC
+        2. Open http://<pc-ip>:8765 on the phone
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Output of `cat VERSION`
+      placeholder: 1.0.0
+    validations:
+      required: true
+  - type: input
+    id: phone
+    attributes:
+      label: Phone and browser
+      placeholder: Android 15, Chrome 140 / iPhone, Safari
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: PC
+      description: Distro and version, session type (X11 or Wayland), keyboard layout
+      placeholder: Ubuntu 24.04, X11, US layout
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Service log
+      description: Output of `journalctl --user -u lan-mouse-keyboard -n 50` or of `./run.sh`
+      render: text
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: Screenshots, output of `getfacl /dev/uinput`
