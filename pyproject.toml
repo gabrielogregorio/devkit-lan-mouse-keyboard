@@ -1,6 +1,6 @@
 [project]
 name = "devkit-lan-mouse-keyboard"
-version = "1.1.0"
+version = "1.1.1"
 description = "The phone becomes the PC's mouse and keyboard over the local network (Ubuntu): FastAPI/WebSocket server that injects input through /dev/uinput"
 requires-python = "==3.12.*"
 dependencies = [
