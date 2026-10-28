@@ -77,7 +77,7 @@ wheels = [
 
 [[package]]
 name = "devkit-lan-mouse-keyboard"
-version = "1.1.0"
+version = "1.1.1"
 source = { virtual = "." }
 dependencies = [
     { name = "evdev" },
