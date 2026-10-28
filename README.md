@@ -67,14 +67,20 @@ Built and tested on Ubuntu 24.04.
    systemctl --user start lan-mouse-keyboard    # or ./run.sh in the foreground
    ```
    On the phone, open the address printed at the end of `install.sh` (`http://<pc-ip>:8765`).
-4. **Optional, top bar icon:** the companion tray app (`devkit-bandeja-apps`, cloned next to this
-   folder) turns the server on and off and shows a QR code with the address, so the phone does not
-   need it typed. It starts the server with `LMK_NO_TRAY=1` so only its own icon shows:
+4. **Top bar icon (optional):** `./tray_icon.py --install` puts an icon on the top bar at every
+   login, gray while off. Its menu turns the server on and off; turning it on opens a QR code with
+   the address, so the phone does not need it typed (it starts the server with `LMK_NO_TRAY=1`, so the server's own status icon stays hidden):
 
    <img src="docs/tray-qr-code.png" alt="Top bar menu of the mouse icon: on air on port 8765, On (checked), the address for the phone, Show QR code, View log; next to it the QR code window with the http address" width="640">
 
-   Its menu is in Brazilian Portuguese (Ligado = On, Mostrar QR code = Show QR code). The address is
-   the PC's local IP, so the QR code only works on the same network.
+   The menu follows the system language (the screenshot is in Brazilian Portuguese: Ligado = On,
+   Mostrar QR code = Show QR code). The address is the PC's local IP, so the QR code only works on
+   the same network. The QR code needs `sudo apt install python3-segno`; without it the window
+   shows only the address. `./tray_icon.py --remove` takes the icon out of the login.
+
+   Menu: the status line ("LAN Mouse & Keyboard (phone as mouse and keyboard): on air (port
+   8765)"), **On** (starts or stops the server), the address for the device, **Show QR code**,
+   **View log** (the server output). A middle click on the icon toggles it.
 
 **Outside the repository:**
 
@@ -102,6 +108,10 @@ LMK_PORT=9000 ./run.sh                          # another port
 ./install.sh                # service installed, off at login
 ./install.sh --autostart    # starts with the session
 ./uninstall.sh
+
+# Top bar icon (on/off, QR code), at every login
+./tray_icon.py --install
+./tray_icon.py --remove
 
 # Test (never opens /dev/uinput: nothing moves your mouse)
 ./run-tests.sh                                   # lint + backend + frontend i18n (~3 s)
@@ -184,7 +194,7 @@ Issues use forms (`bug_report.yml`, `feature_request.yml`); PRs start from `pull
 
 1. Start the server on the PC (`systemctl --user start lan-mouse-keyboard` or `./run.sh`).
 2. **On the phone** (on the **same network** as the PC): open `http://<pc-ip>:8765` (or scan the QR
-   code from the tray app). The dot turns green with **Connected** and the PC shows a notification.
+   code from the top bar icon). The dot turns green with **Connected** and the PC shows a notification.
 3. Drag on the touchpad to move, tap to click, use 2 fingers to scroll. For a shortcut, tap the
    modifiers (they stay highlighted) and then the key: **Ctrl** then **c** = Ctrl+C.
 
@@ -211,6 +221,7 @@ press/release, `k` type text, `key` named key, `combo` modifiers + key. The full
 
 ```
 server/main.py           entry point: device, server thread, bind watchdog, callbacks
+tray_icon.py             top bar icon: turns the server on and off, QR code, --install for the login
 server/input_device.py   virtual mouse + keyboard over uinput, US key map
 server/web.py            FastAPI: static page, /ws, local network guard
 server/tray.py           tray icon (AppIndicator) + notify-send
