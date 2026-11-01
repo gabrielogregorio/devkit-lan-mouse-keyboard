@@ -25,10 +25,6 @@
 
 <sub>Recorded with the real page and server against a fake input controller: the PC screen is simulated and nothing touched <code>/dev/uinput</code>.</sub>
 
-<br><br>
-
-<img src="docs/phone-page.png" alt="The page on a phone: connection status, touchpad area with gesture hints, left and right click buttons and the on-screen keyboard with Esc, Tab, Ctrl, Alt, Super, arrows and Del" width="360">
-
 </div>
 
 ## About
