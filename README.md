@@ -21,6 +21,12 @@
 
 <br>
 
+<img src="docs/demo.gif" alt="Animated demo: on the left a simulated PC screen with a text editor, on the right the real page on a phone. Dragging on the touchpad moves the cursor, a tap clicks, the on-screen keyboard types, holding Left click while moving selects text, Ctrl+C and Ctrl+V copy and paste it, and two fingers scroll" width="820">
+
+<sub>Recorded with the real page and server against a fake input controller: the PC screen is simulated and nothing touched <code>/dev/uinput</code>.</sub>
+
+<br><br>
+
 <img src="docs/phone-page.png" alt="The page on a phone: connection status, touchpad area with gesture hints, left and right click buttons and the on-screen keyboard with Esc, Tab, Ctrl, Alt, Super, arrows and Del" width="360">
 
 </div>
