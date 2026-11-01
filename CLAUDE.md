@@ -285,10 +285,10 @@ Phone: `http://<PC-IP>:8765` (same network).
 
 - `.github/workflows/`: `tests.yml` (unit, then e2e with the Playwright report on failure),
   `check-quality.yml` (ruff, shellcheck, `node --check`, exec bit, pinned actions, YAML),
-  `codeql-analysis.yml`, `auto-complete-fields.yml` (PR assign/labels/changelog/title, fails if
-  `VERSION` is already tagged), `create-tag-and-release.yml` (merged PR → tag `v$VERSION` +
+  `codeql-analysis.yml`, `auto-complete-fields.yml` (PR assign/labels/changelog/title, fails on a
+  `release/x.x.x` branch if `VERSION` is already tagged), `create-tag-and-release.yml` (merged PR → tag `v$VERSION` +
   release with tarball and SHA256SUMS). Shared setup in `.github/actions/setup-environment`.
-- Release = bump `VERSION` in the PR and merge. No manual tags.
+- Release = bump `VERSION` in a `release/x.x.x` PR and merge. No manual tags.
 - **Actions pinned by commit hash** (`uses: owner/repo@<40 hex> # vX.Y.Z`); the lint job fails on
   a tag ref. Runners stay on `ubuntu-24.04`, ruff stays `==` pinned.
 - PR text reaches the release through `env:` and a file, never `${{ }}` inside `run:`.
