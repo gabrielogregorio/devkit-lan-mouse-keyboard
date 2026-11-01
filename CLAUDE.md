@@ -284,7 +284,7 @@ Phone: `http://<PC-IP>:8765` (same network).
 ## 12. CI/CD and releases
 
 - `.github/workflows/`: `tests.yml` (unit, then e2e with the Playwright report on failure),
-  `check-quality.yml` (ruff, shellcheck, `node --check`, exec bit, pinned actions, YAML),
+  `check-quality.yml` (ruff, shellcheck, `node --check`, exec bit, pinned actions, YAML, PR-only dependency audit),
   `codeql-analysis.yml`, `auto-complete-fields.yml` (PR assign/labels/changelog/title, fails on a
   `release/x.x.x` branch if `VERSION` is already tagged), `create-tag-and-release.yml` (merged PR → tag `v$VERSION` +
   release with tarball and SHA256SUMS). Shared setup in `.github/actions/setup-environment`.
